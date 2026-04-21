@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en" class="dark h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Kalu Putic – DB Archive</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <script>tailwind.config = { darkMode: 'class' }</script>
+  <script src="./assets/jafersql-cache.js"></script>
+  <script src="./assets/jafersql.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .logo-font { font-family: 'Playfair Display', serif; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+    .desc-text { font-size: 0.75rem; line-height: 1.4; }
+    .prompt-font { font-family: 'Fira Code', monospace; font-size: 0.7rem; white-space: pre-wrap; word-break: break-word; }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.3); }
+    .hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .tab-btn-active { background-color: #1f2937 !important; color: white !important; }
+    .dark .tab-btn-active { background-color: #374151 !important; color: white !important; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 50; overflow-y: auto; }
+    .modal.active { display: flex; }
+    .modal-content { max-height: 90vh; overflow-y: auto; }
+  </style>
+  <style>
+
+body{
+padding-top: env(safe-area-inset-top)!important;
+}
+footer button{
+margin-top:-15px;
+}
+  </style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col h-screen m-0 p-0 overflow-hidden">
+  <header class="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-sm shrink-0">
+    <div class="flex items-center gap-2">
+      <i class="fas fa-database text-indigo-500 dark:text-indigo-400 text-lg"></i>
+      <h1 class="logo-font text-lg font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">KALU PUTIC</h1>
+      <span class="text-xs text-gray-500 dark:text-gray-400 ml-1 hidden sm:inline">/ DB archive</span>
+    </div>
+    <div class="flex gap-2">
+      <button id="openUpdateModalBtn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all" title="Update existing image"><i class="fas fa-edit"></i></button>
+      <button id="openAddModalBtn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all" title="Add new image"><i class="fas fa-plus"></i></button>
+      <button id="downloadDbBtn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all" title="Download database (save all changes)"><i class="fas fa-download"></i></button>
+      <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-all">
+        <i class="fas fa-moon dark:hidden"></i><i class="fas fa-sun hidden dark:inline"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col p-4 overflow-hidden">
+    <!-- DESCRIPTIONS TAB -->
+    <div data-tab="descriptions" class="tab-pane bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 md:p-5 flex flex-col h-full overflow-hidden">
+      <div class="flex flex-wrap justify-between gap-2 mb-4 shrink-0">
+        <select id="descSelect" class="text-sm border rounded-lg px-3 py-1.5 bg-white dark:bg-gray-700 max-w-[70%] truncate shadow-sm"></select>
+        <button id="copyDescBtn" class="text-sm border rounded-lg px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all flex items-center gap-1"><i class="far fa-copy"></i> Copy</button>
+      </div>
+      <div id="descDetail" class="space-y-4 flex-1 overflow-y-auto min-h-0 hide-scrollbar">
+        <div><h3 class="text-xs font-semibold uppercase tracking-wider"><i class="far fa-face-smile mr-1"></i> Face & Expression</h3><p id="descFace" class="desc-text mt-1">—</p></div>
+        <div><h3 class="text-xs font-semibold uppercase tracking-wider"><i class="fas fa-vest mr-1"></i> Attire, Dress & Outfit</h3><p id="descAttire" class="desc-text mt-1">—</p></div>
+        <div><h3 class="text-xs font-semibold uppercase tracking-wider"><i class="fas fa-camera mr-1"></i> Pose & Camera</h3><p id="descPose" class="desc-text mt-1">—</p></div>
+        <div><h3 class="text-xs font-semibold uppercase tracking-wider"><i class="fas fa-tree mr-1"></i> Environment</h3><p id="descEnv" class="desc-text mt-1">—</p></div>
+      </div>
+    </div>
+
+    <!-- PROMPTS TAB -->
+    <div data-tab="prompts" class="tab-pane bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 md:p-5 flex flex-col h-full overflow-hidden">
+      <div class="flex flex-wrap justify-between items-center gap-2 mb-4 shrink-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <select id="promptSelect" class="text-sm border rounded-lg px-3 py-1.5 bg-white dark:bg-gray-700 max-w-[60%] truncate shadow-sm"></select>
+          <div id="generatedBadge" class="text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center gap-1"><i class="far fa-hourglass-half"></i> <span>Unknown</span></div>
+        </div>
+        <div class="flex gap-2">
+          <button id="openUploadModalBtn" class="text-sm border rounded-lg px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all flex items-center gap-1"><i class="fas fa-upload"></i> Upload Image</button>
+          <button id="copyPromptBtn" class="text-sm border rounded-lg px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all flex items-center gap-1"><i class="far fa-copy"></i> Copy</button>
+        </div>
+      </div>
+      <div class="bg-gray-50 dark:bg-gray-900 rounded-xl p-3 border flex-1 overflow-y-auto min-h-0 hide-scrollbar"><pre id="promptText" class="prompt-font">—</pre></div>
+      <div class="mt-3 text-xs text-gray-500 shrink-0"><i class="fas fa-info-circle"></i> Includes <code class="bg-gray-200 dark:bg-gray-700 px-1 rounded">--ar 9:16</code></div>
+    </div>
+
+    <!-- GALLERY TAB -->
+    <div data-tab="gallery" class="tab-pane bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-4 h-full overflow-hidden">
+      <div class="h-full overflow-y-auto hide-scrollbar">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4" id="galleryGrid"></div>
+      </div>
+    </div>
+
+    <!-- FASHION TAB -->
+    <div data-tab="fashion" class="tab-pane bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col md:flex-row h-full">
+      <div class="md:w-1/2 flex-1 min-h-0 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-3">
+        <div class="aspect-[9/16] w-full h-full max-h-full rounded-xl shadow-lg overflow-hidden"><img id="fashionImg" class="w-full h-full object-contain transition-transform duration-500 hover:scale-105"></div>
+      </div>
+      <div class="md:w-1/2 flex-1 min-h-0 p-5 md:p-6 flex flex-col overflow-hidden">
+        <div class="mb-3 shrink-0"><span id="fashionId" class="text-xs font-mono bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">—</span><h2 id="fashionTitle" class="logo-font text-xl md:text-2xl font-bold mt-2">—</h2></div>
+        <div id="fashionDetails" class="flex-1 overflow-y-auto min-h-0 space-y-4 hide-scrollbar">
+          <div><h3 class="text-xs font-semibold uppercase">Face & Expression</h3><p id="fashionFace" class="desc-text">—</p></div>
+          <div><h3 class="text-xs font-semibold uppercase">Attire, Dress & Outfit</h3><p id="fashionAttire" class="desc-text">—</p></div>
+          <div><h3 class="text-xs font-semibold uppercase">Pose & Camera</h3><p id="fashionPose" class="desc-text">—</p></div>
+          <div><h3 class="text-xs font-semibold uppercase">Environment</h3><p id="fashionEnv" class="desc-text">—</p></div>
+        </div>
+        <div class="mt-5 flex flex-wrap justify-between items-center gap-2 shrink-0">
+          <button id="backToGalleryBtn" class="text-sm border rounded-lg px-3 py-1.5"><i class="fas fa-th"></i> Gallery</button>
+          <div class="flex gap-2"><button id="fashionPrev" class="border rounded-lg px-3 py-1 text-sm disabled:opacity-40" disabled>Prev</button><button id="fashionNext" class="border rounded-lg px-3 py-1 text-sm disabled:opacity-40" disabled>Next</button></div>
+        </div>
+        <button id="copyFashionDescBtn" class="mt-3 w-full text-sm border rounded-lg py-2"><i class="far fa-copy"></i> Copy full description</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="h-12 flex items-center justify-center gap-4 border-t border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shrink-0 text-sm">
+    <button data-tab-btn="descriptions" class="tab-btn px-3 py-1 rounded-lg transition-all">Descriptions</button>
+    <button data-tab-btn="prompts" class="tab-btn px-3 py-1 rounded-lg transition-all">Prompts</button>
+    <button data-tab-btn="gallery" class="tab-btn px-3 py-1 rounded-lg transition-all">Gallery</button>
+    <button data-tab-btn="fashion" class="tab-btn px-3 py-1 rounded-lg transition-all">Fashion</button>
+  </footer>
+
+  <!-- UPLOAD MODAL (compact) -->
+  <div id="uploadModal" class="modal">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full mx-3 p-4">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-sm font-bold">Upload Generated Image</h3>
+        <button id="closeUploadModalBtn" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="space-y-2">
+        <div>
+          <label class="block text-xs font-medium mb-1">Select Image</label>
+          <select id="uploadImageId" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Image File (JPEG/PNG)</label>
+          <input type="file" id="uploadFile" accept="image/jpeg,image/png" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700">
+        </div>
+        <div class="flex justify-end gap-2 pt-1">
+          <button id="cancelUploadBtn" class="text-xs border rounded-md px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
+          <button id="confirmUploadBtn" class="text-xs bg-indigo-600 text-white rounded-md px-3 py-1.5 hover:bg-indigo-700">Upload</button>
+        </div>
+        <div id="uploadStatus" class="text-xs text-center hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPDATE MODAL (compact, with first row flex) -->
+  <div id="updateModal" class="modal">
+    <div class="modal-content bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full mx-3 p-4">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-sm font-bold">Update Image Data</h3>
+        <button class="closeModalBtn text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="space-y-2">
+        <div class="flex flex-wrap gap-2 items-end">
+          <div class="flex-1 min-w-[70px]">
+            <label class="block text-xs font-medium mb-1">Image ID</label>
+            <select id="updateImageId" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></select>
+          </div>
+          <div class="flex-1 min-w-[100px]">
+            <label class="block text-xs font-medium mb-1">Title</label>
+            <input type="text" id="updateTitle" class="w-full text-xs border rounded-md px-2 py-0.5 bg-white dark:bg-gray-700">
+          </div>
+          <div class="w-20">
+            <label class="block text-xs font-medium mb-1">Generated?</label>
+            <select id="updateGenerated" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700">
+              <option value="0">No</option><option value="1">Yes</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Face & Expression</label>
+          <textarea id="updateFace" rows="2" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Attire, Dress & Outfit</label>
+          <textarea id="updateAttire" rows="2" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Pose & Camera</label>
+          <textarea id="updatePose" rows="1" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Environment</label>
+          <textarea id="updateEnv" rows="2" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Prompt</label>
+          <textarea id="updatePrompt" rows="3" class="w-full text-xs font-mono border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-1">
+          <button id="cancelUpdateBtn" class="text-xs border rounded-md px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
+          <button id="confirmUpdateBtn" class="text-xs bg-indigo-600 text-white rounded-md px-3 py-1.5 hover:bg-indigo-700">Update</button>
+        </div>
+        <div id="updateStatus" class="text-xs text-center hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD MODAL (compact) -->
+  <div id="addModal" class="modal">
+    <div class="modal-content bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full mx-3 p-4">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-sm font-bold">Add New Image</h3>
+        <button class="closeModalBtn text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="space-y-2">
+        <div>
+          <label class="block text-xs font-medium mb-1">Image ID (e.g., image_23)</label>
+          <input type="text" id="addImageId" placeholder="image_23" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Title</label>
+          <input type="text" id="addTitle" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700">
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Face & Expression</label>
+          <textarea id="addFace" rows="2" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Attire, Dress & Outfit</label>
+          <textarea id="addAttire" rows="2" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Pose & Camera</label>
+          <textarea id="addPose" rows="1" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Environment</label>
+          <textarea id="addEnv" rows="2" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Prompt</label>
+          <textarea id="addPrompt" rows="3" class="w-full text-xs font-mono border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1">Upload Image (optional)</label>
+          <input type="file" id="addImageFile" accept="image/jpeg,image/png" class="w-full text-xs border rounded-md px-2 py-1.5 bg-white dark:bg-gray-700">
+        </div>
+        <div class="flex justify-end gap-2 pt-1">
+          <button id="cancelAddBtn" class="text-xs border rounded-md px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
+          <button id="confirmAddBtn" class="text-xs bg-green-600 text-white rounded-md px-3 py-1.5 hover:bg-green-700">Add</button>
+        </div>
+        <div id="addStatus" class="text-xs text-center hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Helper: escape single quotes for SQL
+    function escapeSql(str) { return str.replace(/'/g, "''"); }
+
+    let db;
+    let imageList = [];
+    let fullDesc = {};
+    let promptsMap = {};
+    let currentFashionId = '';
+    
+    // Track object URLs for cleanup
+    let currentObjectUrls = new Set();
+
+    function revokeAllObjectUrls() {
+        for (let url of currentObjectUrls) {
+            URL.revokeObjectURL(url);
+        }
+        currentObjectUrls.clear();
+    }
+
+    // Returns a blob URL or null if no blob exists
+    async function getImageBlobUrl(imageId) {
+        try {
+            const row = db.jaferGet('SELECT blob_data, mime_type FROM image_blobs WHERE image_id = ?', [imageId]);
+            if (row && row.blob_data) {
+                const blob = new Blob([row.blob_data], { type: row.mime_type || 'image/jpeg' });
+                const url = URL.createObjectURL(blob);
+                currentObjectUrls.add(url);
+                return url;
+            }
+        } catch (err) {
+            console.warn(`No blob for ${imageId}:`, err);
+        }
+        return null;
+    }
+
+    async function loadImageElement(imgElement, imageId) {
+        if (!imgElement) return;
+        const blobUrl = await getImageBlobUrl(imageId);
+        if (blobUrl) {
+            imgElement.src = blobUrl;
+        } else {
+            imgElement.src = `/images/${imageId}.jpg`;
+            imgElement.onerror = () => { imgElement.src = 'https://placehold.co/400x711?text=Not+Found'; };
+        }
+    }
+
+    // Download current database as .sqlite file
+    function downloadDatabase() {
+        if (!db || typeof db.export !== 'function') {
+            console.error('Database export not available');
+            alert('Cannot export database – export function missing.');
+            return;
+        }
+        try {
+            const binary = db.export(); // Uint8Array of the SQLite file
+            const blob = new Blob([binary], { type: 'application/x-sqlite3' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'kaluDB.sqlite';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            console.log('Database exported successfully');
+        } catch (err) {
+            console.error('Export failed:', err);
+            alert('Export failed: ' + err.message);
+        }
+    }
+
+    // ----- Data refresh and UI population (full implementation) -----
+    async function refreshDataAndUI() {
+        revokeAllObjectUrls();
+
+        const imagesRows = db.jaferAll('SELECT image_id, title, is_generated FROM images ORDER BY image_id');
+        imageList = imagesRows.map(r => r.image_id);
+        const descRows = db.jaferAll('SELECT d.image_id, ds.section_id, d.content FROM descriptions d JOIN description_sections ds ON d.section_id = ds.section_id');
+        fullDesc = {};
+        for (let row of descRows) {
+            if (!fullDesc[row.image_id]) fullDesc[row.image_id] = {};
+            fullDesc[row.image_id][row.section_id] = row.content;
+        }
+        for (let id of imageList) {
+            const img = imagesRows.find(r => r.image_id === id);
+            if (!fullDesc[id]) fullDesc[id] = {};
+            fullDesc[id].title = img.title;
+            fullDesc[id].is_generated = img.is_generated;
+            fullDesc[id].face_expression = fullDesc[id].face_expression || '—';
+            fullDesc[id].attire_outfit = fullDesc[id].attire_outfit || '—';
+            fullDesc[id].pose_camera = fullDesc[id].pose_camera || '—';
+            fullDesc[id].environment = fullDesc[id].environment || '—';
+        }
+        const promptRows = db.jaferAll('SELECT image_id, prompt_text FROM prompts');
+        promptsMap = {};
+        promptRows.forEach(r => { promptsMap[r.image_id] = r.prompt_text; });
+
+        updateSelectsAndGallery();
+        if (imageList.length) {
+            updateDescription(imageList[0]);
+            updatePrompt(imageList[0]);
+            currentFashionId = imageList[0];
+            updateFashion();
+        }
+    }
+
+    function updateSelectsAndGallery() {
+        const descSelect = document.getElementById('descSelect');
+        const promptSelect = document.getElementById('promptSelect');
+        const galleryGrid = document.getElementById('galleryGrid');
+        if (descSelect) {
+            descSelect.innerHTML = imageList.map(key => `<option value="${key}">${key.replace('image_','').padStart(2,'0')} · ${fullDesc[key].title.substring(0,50)}</option>`).join('');
+        }
+        if (promptSelect) {
+            promptSelect.innerHTML = imageList.map(key => `<option value="${key}">${key.replace('image_','').padStart(2,'0')} · ${fullDesc[key].title.substring(0,50)}</option>`).join('');
+        }
+        if (galleryGrid) {
+            galleryGrid.innerHTML = imageList.map(key => {
+                const d = fullDesc[key];
+                const num = key.replace('image_','');
+                const short = (d.face_expression || d.attire_outfit || '').substring(0,80)+'…';
+                const isGen = d.is_generated;
+                const genIcon = isGen ? '<i class="fas fa-check-circle text-green-500 text-xs ml-1"></i>' : '';
+                return `<div class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700 card-hover cursor-pointer gallery-card" data-id="${key}">
+                    <div class="aspect-[9/16] bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                        <img class="gallery-img w-full h-full object-cover transition-transform duration-500 hover:scale-105" data-id="${key}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1 1'%3E%3Crect width='1' height='1' fill='%23cccccc'/%3E%3C/svg%3E" loading="lazy">
+                    </div>
+                    <div class="p-2"><h3 class="font-semibold text-xs truncate flex items-center">${num.padStart(2,'0')} · ${escapeHtml(d.title)}<span class="gen-badge ml-1">${genIcon}</span></h3><p class="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">${escapeHtml(short)}</p></div>
+                </div>`;
+            }).join('');
+            document.querySelectorAll('.gallery-img').forEach(img => {
+                const id = img.getAttribute('data-id');
+                if (id) loadImageElement(img, id);
+            });
+            document.querySelectorAll('.gallery-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const id = card.getAttribute('data-id');
+                    if (id) {
+                        currentFashionId = id;
+                        updateFashion();
+                        switchTab('fashion');
+                    }
+                });
+            });
+        }
+    }
+
+    function updateDescription(id) {
+        const d = fullDesc[id];
+        if (!d) return;
+        document.getElementById('descFace').textContent = d.face_expression;
+        document.getElementById('descAttire').textContent = d.attire_outfit;
+        document.getElementById('descPose').textContent = d.pose_camera;
+        document.getElementById('descEnv').textContent = d.environment;
+    }
+
+    function updatePrompt(id) {
+        const p = "Generate image: " + promptsMap[id];
+        const isGen = fullDesc[id]?.is_generated || false;
+        document.getElementById('promptText').textContent = p || '—';
+        const badge = document.getElementById('generatedBadge');
+        if (isGen) {
+            badge.innerHTML = '<i class="fas fa-check-circle text-green-500"></i>';
+            badge.className = 'text-xs px-2 py-1 rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 flex items-center gap-1';
+        } else {
+            badge.innerHTML = '<i class="far fa-hourglass-half text-yellow-500"></i>';
+            badge.className = 'text-xs px-2 py-1 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center gap-1';
+        }
+    }
+
+    async function updateFashion() {
+        const d = fullDesc[currentFashionId];
+        if (!d) return;
+        const idx = imageList.indexOf(currentFashionId);
+        document.getElementById('fashionId').textContent = `${String(idx+1).padStart(2,'0')} / ${imageList.length}`;
+        document.getElementById('fashionTitle').textContent = d.title;
+        document.getElementById('fashionFace').textContent = d.face_expression;
+        document.getElementById('fashionAttire').textContent = d.attire_outfit;
+        document.getElementById('fashionPose').textContent = d.pose_camera;
+        document.getElementById('fashionEnv').textContent = d.environment;
+        
+        const imgElement = document.getElementById('fashionImg');
+        if (imgElement.currentObjectUrl) {
+            URL.revokeObjectURL(imgElement.currentObjectUrl);
+            imgElement.currentObjectUrl = null;
+        }
+        const blobUrl = await getImageBlobUrl(currentFashionId);
+        if (blobUrl) {
+            imgElement.src = blobUrl;
+            imgElement.currentObjectUrl = blobUrl;
+        } else {
+            imgElement.src = `/images/${currentFashionId}.jpg`;
+            imgElement.onerror = () => { imgElement.src = 'https://placehold.co/400x711?text=Not+Found'; };
+            imgElement.currentObjectUrl = null;
+        }
+        document.getElementById('fashionPrev').disabled = (idx === 0);
+        document.getElementById('fashionNext').disabled = (idx === imageList.length - 1);
+    }
+
+    function navigateFashion(delta) {
+        const idx = imageList.indexOf(currentFashionId);
+        const newIdx = idx + delta;
+        if (newIdx >= 0 && newIdx < imageList.length) {
+            currentFashionId = imageList[newIdx];
+            updateFashion();
+        }
+    }
+
+    // ----- CRUD Operations with automatic SQL escaping -----
+    async function updateImage(imageId, data) {
+        const title = escapeSql(data.title);
+        const isGen = data.is_generated ? 1 : 0;
+        const face = escapeSql(data.face);
+        const attire = escapeSql(data.attire);
+        const pose = escapeSql(data.pose);
+        const env = escapeSql(data.env);
+        const prompt = escapeSql(data.prompt);
+        try {
+            db.jaferRun('UPDATE images SET title = ?, is_generated = ? WHERE image_id = ?', [title, isGen, imageId]);
+            db.jaferRun('UPDATE descriptions SET content = ? WHERE image_id = ? AND section_id = ?', [face, imageId, 'face_expression']);
+            db.jaferRun('UPDATE descriptions SET content = ? WHERE image_id = ? AND section_id = ?', [attire, imageId, 'attire_outfit']);
+            db.jaferRun('UPDATE descriptions SET content = ? WHERE image_id = ? AND section_id = ?', [pose, imageId, 'pose_camera']);
+            db.jaferRun('UPDATE descriptions SET content = ? WHERE image_id = ? AND section_id = ?', [env, imageId, 'environment']);
+            db.jaferRun('UPDATE prompts SET prompt_text = ? WHERE image_id = ?', [prompt, imageId]);
+            await refreshDataAndUI();
+            return true;
+        } catch (err) { console.error(err); return false; }
+    }
+
+    async function addNewImage(data) {
+        const id = data.imageId;
+        const title = escapeSql(data.title);
+        const face = escapeSql(data.face);
+        const attire = escapeSql(data.attire);
+        const pose = escapeSql(data.pose);
+        const env = escapeSql(data.env);
+        const prompt = escapeSql(data.prompt);
+        try {
+            db.jaferRun('INSERT INTO images (image_id, title, is_generated) VALUES (?, ?, 0)', [id, title]);
+            db.jaferRun('INSERT INTO descriptions (image_id, section_id, content) VALUES (?, ?, ?)', [id, 'face_expression', face]);
+            db.jaferRun('INSERT INTO descriptions (image_id, section_id, content) VALUES (?, ?, ?)', [id, 'attire_outfit', attire]);
+            db.jaferRun('INSERT INTO descriptions (image_id, section_id, content) VALUES (?, ?, ?)', [id, 'pose_camera', pose]);
+            db.jaferRun('INSERT INTO descriptions (image_id, section_id, content) VALUES (?, ?, ?)', [id, 'environment', env]);
+            db.jaferRun('INSERT INTO prompts (image_id, prompt_text) VALUES (?, ?)', [id, prompt]);
+            if (data.blob) {
+                db.jaferRun('INSERT INTO image_blobs (image_id, blob_data, mime_type) VALUES (?, ?, ?)', [id, data.blob, data.mimeType]);
+                db.jaferRun('UPDATE images SET is_generated = 1 WHERE image_id = ?', [id]);
+            }
+            await refreshDataAndUI();
+            return true;
+        } catch (err) { console.error(err); return false; }
+    }
+
+    async function uploadGeneratedImage(imageId, file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const arrayBuffer = reader.result;
+                const blobArray = new Uint8Array(arrayBuffer);
+                const mimeType = file.type;
+                try {
+                    db.jaferRun('UPDATE images SET is_generated = 1 WHERE image_id = ?', [imageId]);
+                    db.jaferRun('INSERT OR REPLACE INTO image_blobs (image_id, blob_data, mime_type) VALUES (?, ?, ?)', [imageId, blobArray, mimeType]);
+                    await refreshDataAndUI();
+                    resolve();
+                } catch (err) { reject(err); }
+            };
+            reader.onerror = () => reject(reader.error);
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // ----- Modal Logic (compact, with inline row for update modal) -----
+    function setupModals() {
+        // Upload modal
+        const uploadModal = document.getElementById('uploadModal');
+        const openUpload = document.getElementById('openUploadModalBtn');
+        const closeUpload = document.getElementById('closeUploadModalBtn');
+        const cancelUpload = document.getElementById('cancelUploadBtn');
+        const confirmUpload = document.getElementById('confirmUploadBtn');
+        const uploadImageSelect = document.getElementById('uploadImageId');
+        const uploadFileInput = document.getElementById('uploadFile');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        openUpload.onclick = () => {
+            uploadImageSelect.innerHTML = imageList.map(id => `<option value="${id}">${id.replace('image_','')} · ${fullDesc[id].title}</option>`).join('');
+            uploadFileInput.value = '';
+            uploadStatus.classList.add('hidden');
+            uploadModal.classList.add('active');
+        };
+        const closeUploadModal = () => uploadModal.classList.remove('active');
+        closeUpload.onclick = closeUploadModal;
+        cancelUpload.onclick = closeUploadModal;
+        confirmUpload.onclick = async () => {
+            const id = uploadImageSelect.value;
+            const file = uploadFileInput.files[0];
+            if (!file) { uploadStatus.textContent = 'Select a file'; uploadStatus.classList.remove('hidden'); return; }
+            if (!['image/jpeg','image/png'].includes(file.type)) { uploadStatus.textContent = 'Only JPEG/PNG'; uploadStatus.classList.remove('hidden'); return; }
+            uploadStatus.textContent = 'Uploading...';
+            uploadStatus.classList.remove('hidden');
+            try {
+                await uploadGeneratedImage(id, file);
+                uploadStatus.textContent = 'Success!';
+                setTimeout(closeUploadModal, 1000);
+            } catch (err) { uploadStatus.textContent = 'Error: '+err.message; }
+        };
+
+        // Update modal
+        const updateModal = document.getElementById('updateModal');
+        const openUpdate = document.getElementById('openUpdateModalBtn');
+        const closeUpdateBtns = document.querySelectorAll('#updateModal .closeModalBtn');
+        const cancelUpdate = document.getElementById('cancelUpdateBtn');
+        const confirmUpdate = document.getElementById('confirmUpdateBtn');
+        const updateIdSelect = document.getElementById('updateImageId');
+        const updateTitle = document.getElementById('updateTitle');
+        const updateGenerated = document.getElementById('updateGenerated');
+        const updateFace = document.getElementById('updateFace');
+        const updateAttire = document.getElementById('updateAttire');
+        const updatePose = document.getElementById('updatePose');
+        const updateEnv = document.getElementById('updateEnv');
+        const updatePrompt = document.getElementById('updatePrompt');
+        const updateStatusSpan = document.getElementById('updateStatus');
+
+        openUpdate.onclick = () => {
+            updateIdSelect.innerHTML = imageList.map(id => `<option value="${id}">${id.replace('image_','')} · ${fullDesc[id].title}</option>`).join('');
+            updateIdSelect.onchange = () => {
+                const id = updateIdSelect.value;
+                const d = fullDesc[id];
+                if (d) {
+                    updateTitle.value = d.title;
+                    updateGenerated.value = d.is_generated ? '1' : '0';
+                    updateFace.value = d.face_expression;
+                    updateAttire.value = d.attire_outfit;
+                    updatePose.value = d.pose_camera;
+                    updateEnv.value = d.environment;
+                    updatePrompt.value = promptsMap[id] || '';
+                }
+            };
+            updateIdSelect.dispatchEvent(new Event('change'));
+            updateModal.classList.add('active');
+        };
+        const closeUpdateModal = () => updateModal.classList.remove('active');
+        closeUpdateBtns.forEach(btn => btn.onclick = closeUpdateModal);
+        cancelUpdate.onclick = closeUpdateModal;
+        confirmUpdate.onclick = async () => {
+            const id = updateIdSelect.value;
+            const data = {
+                title: updateTitle.value,
+                is_generated: updateGenerated.value === '1',
+                face: updateFace.value,
+                attire: updateAttire.value,
+                pose: updatePose.value,
+                env: updateEnv.value,
+                prompt: updatePrompt.value
+            };
+            updateStatusSpan.textContent = 'Updating...';
+            updateStatusSpan.classList.remove('hidden');
+            const success = await updateImage(id, data);
+            if (success) { updateStatusSpan.textContent = 'Success!'; setTimeout(closeUpdateModal, 1000); }
+            else { updateStatusSpan.textContent = 'Error'; }
+        };
+
+        // Add modal
+        const addModal = document.getElementById('addModal');
+        const openAdd = document.getElementById('openAddModalBtn');
+        const closeAddBtns = document.querySelectorAll('#addModal .closeModalBtn');
+        const cancelAdd = document.getElementById('cancelAddBtn');
+        const confirmAdd = document.getElementById('confirmAddBtn');
+        const addImageId = document.getElementById('addImageId');
+        const addTitle = document.getElementById('addTitle');
+        const addFace = document.getElementById('addFace');
+        const addAttire = document.getElementById('addAttire');
+        const addPose = document.getElementById('addPose');
+        const addEnv = document.getElementById('addEnv');
+        const addPrompt = document.getElementById('addPrompt');
+        const addFile = document.getElementById('addImageFile');
+        const addStatusSpan = document.getElementById('addStatus');
+
+        openAdd.onclick = () => {
+            addImageId.value = '';
+            addTitle.value = '';
+            addFace.value = '';
+            addAttire.value = '';
+            addPose.value = '';
+            addEnv.value = '';
+            addPrompt.value = '';
+            addFile.value = '';
+            addModal.classList.add('active');
+        };
+        const closeAddModal = () => addModal.classList.remove('active');
+        closeAddBtns.forEach(btn => btn.onclick = closeAddModal);
+        cancelAdd.onclick = closeAddModal;
+        confirmAdd.onclick = async () => {
+            const id = addImageId.value.trim();
+            if (!id) { addStatusSpan.textContent = 'Image ID required'; addStatusSpan.classList.remove('hidden'); return; }
+            const file = addFile.files[0];
+            let blobData = null, mimeType = null;
+            if (file) {
+                if (!['image/jpeg','image/png'].includes(file.type)) { addStatusSpan.textContent = 'Only JPEG/PNG'; addStatusSpan.classList.remove('hidden'); return; }
+                const buf = await file.arrayBuffer();
+                blobData = new Uint8Array(buf);
+                mimeType = file.type;
+            }
+            const data = {
+                imageId: id,
+                title: addTitle.value,
+                face: addFace.value,
+                attire: addAttire.value,
+                pose: addPose.value,
+                env: addEnv.value,
+                prompt: addPrompt.value,
+                blob: blobData,
+                mimeType: mimeType
+            };
+            addStatusSpan.textContent = 'Adding...';
+            addStatusSpan.classList.remove('hidden');
+            const success = await addNewImage(data);
+            if (success) { addStatusSpan.textContent = 'Success!'; setTimeout(closeAddModal, 1000); }
+            else { addStatusSpan.textContent = 'Error'; }
+        };
+    }
+
+    // ----- Tab Switching -----
+    function switchTab(tabId) {
+        document.querySelectorAll('[data-tab]').forEach(pane => pane.style.display = 'none');
+        const activePane = document.querySelector(`[data-tab="${tabId}"]`);
+        if (activePane) activePane.style.display = 'flex';
+        document.querySelectorAll('[data-tab-btn]').forEach(btn => {
+            const isActive = btn.getAttribute('data-tab-btn') === tabId;
+            if (isActive) btn.classList.add('tab-btn-active');
+            else btn.classList.remove('tab-btn-active');
+        });
+        if (tabId === 'fashion') updateFashion();
+    }
+
+    // ----- Initialization -----
+    async function init() {
+        if (!window.JaferSQL) { alert('JaferSQL not loaded'); return; }
+        JaferSQL.configure({ useCache: true, sqlJsUrl: './assets/jafersql.js' });
+        await JaferSQL.jaferPreload();
+        const resp = await fetch('./assets/kaluDB.sqlite');
+        if (!resp.ok) { alert('Database not found'); return; }
+        const buf = await resp.arrayBuffer();
+        db = await JaferSQL.jaferInit(new Uint8Array(buf));
+        await refreshDataAndUI();
+        setupModals();
+
+        document.getElementById('descSelect').addEventListener('change', (e) => updateDescription(e.target.value));
+        document.getElementById('promptSelect').addEventListener('change', (e) => updatePrompt(e.target.value));
+        document.getElementById('copyDescBtn').onclick = () => copyFullDescription(document.getElementById('descSelect').value);
+        document.getElementById('copyPromptBtn').onclick = () => copyPrompt(document.getElementById('promptSelect').value);
+        document.getElementById('copyFashionDescBtn').onclick = () => copyFullDescription(currentFashionId);
+        document.getElementById('fashionPrev').onclick = () => navigateFashion(-1);
+        document.getElementById('fashionNext').onclick = () => navigateFashion(1);
+        document.getElementById('backToGalleryBtn').onclick = () => switchTab('gallery');
+        document.querySelectorAll('[data-tab-btn]').forEach(btn => btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab-btn'))));
+        document.getElementById('downloadDbBtn').addEventListener('click', downloadDatabase);
+
+        switchTab('descriptions');
+    }
+
+    function copyFullDescription(id) {
+        const d = fullDesc[id];
+        if (!d) return;
+        const text = `${d.title}\n\nFACE & EXPRESSION:\n${d.face_expression}\n\nATTIRE, DRESS & OUTFIT:\n${d.attire_outfit}\n\nPOSE & CAMERA:\n${d.pose_camera}\n\nENVIRONMENT:\n${d.environment}`;
+        navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+    }
+    function copyPrompt(id) {
+        const p = promptsMap[id];
+        if (p) navigator.clipboard.writeText(p).then(() => alert('Prompt copied!'));
+    }
+    function escapeHtml(str) { return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+
+    init();
+
+    const themeToggle = document.getElementById('themeToggle');
+    const htmlEl = document.documentElement;
+    if (localStorage.theme === 'light') htmlEl.classList.remove('dark');
+    else htmlEl.classList.add('dark');
+    themeToggle.onclick = () => {
+        htmlEl.classList.toggle('dark');
+        localStorage.theme = htmlEl.classList.contains('dark') ? 'dark' : 'light';
+    };
+  </script>
+
+</body>
+</html>
